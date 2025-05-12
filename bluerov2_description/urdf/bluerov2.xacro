@@ -85,7 +85,7 @@
   <!-- Include submodules for dynamics, thrusters and sensors -->
   <xacro:include filename="hydrodynamics.xacro"/>
   <xacro:include filename="thrusters.xacro"/>
-  <xacro:include filename="sensors.xacro"/>
+  <!-- <xacro:include filename="sensors.xacro"/> -->
 
   <!-- Only include Gazebo plugins if simulation argument is true -->
   <xacro:if value="$(arg simulation)">

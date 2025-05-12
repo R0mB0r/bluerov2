@@ -147,7 +147,7 @@
       <origin xyz="0 0 -0.022" rpy="0 0 0"/>
       <geometry>
         <mesh filename="package://bluerov2_description/meshes/ping360_sonar.dae"
-              scale="0.01 0.01 0.01"/>/>
+              scale="0.01 0.01 0.01"/>/
       </geometry>
 
     </visual>
