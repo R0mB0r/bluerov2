@@ -41,13 +41,6 @@
       </graded_buoyancy>
     </plugin>
 
-    <plugin name="ros_pose_bridge" filename="libros_gz_sim_pose_system.so">
-      <ros>
-        <remapping>~/pose@/model/bluerov2/pose</remapping>
-      </ros>
-    </plugin>
-
-
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
       <pose>0 0 10 0 0 0</pose>
