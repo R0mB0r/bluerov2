@@ -66,6 +66,8 @@ def test_model():
     nb_steps_episode = []
     sum_norm_u_list = []
 
+    list_d_delta = []
+    list_norm_u = []
 
     # Reset de l'environnement
     obs = env.reset()
@@ -76,6 +78,9 @@ def test_model():
         truncated = False
         total_reward = 0
         step = 0
+        sum_norm_u = 0
+
+
 
         while not (done or truncated):
             action, _ = model.predict(obs, deterministic=True)
@@ -88,9 +93,16 @@ def test_model():
         
             #print(f"🔹 Step {step}: Reward={reward[0]:.2f}, Done={done}, Truncated={truncated}")
 
+            # Enregistrement des distances et des normes
+            list_d_delta.append(info[0]['d_delta'])
+            list_norm_u.append(info[0]['norm_u'])
+
+            sum_norm_u += info[0]['norm_u']
+            
             time.sleep(0.1)
+        
         nb_steps_episode.append(step)
-        sum_norm_u_list.append(info[0]['norm_u'])
+        sum_norm_u_list.append(sum_norm_u)
         
         print(f"✅ Fin de l’épisode {episode + 1} - Total Reward: {total_reward:.2f}, Steps: {step}")
 
@@ -99,15 +111,13 @@ def test_model():
     nb_success = info[0]['nb_success']
     nb_collisions = info[0]['nb_collisions']
     nb_timeouts = info[0]['nb_timeouts']
-    d_delta = info[0]['d_delta']
-    norm_u = info[0]['norm_u']
 
     print(f"success rate (%): {nb_success / num_episodes * 100:.2f}%")
     print(f"collision rate (%): {nb_collisions / num_episodes * 100:.2f}%")
     print(f"timeout rate (%): {nb_timeouts / num_episodes * 100:.2f}%")
-    print(f"mean of d_delta: {np.mean(d_delta):.2f}")
-    print(f"std of d_delta: {np.std(d_delta):.2f}")
-    print(f"mean of norm_u: {np.mean(norm_u):.2f}")
+    print(f"mean of d_delta: {np.mean(list_d_delta):.2f}")
+    print(f"std of d_delta: {np.std(list_d_delta):.2f}")
+    print(f"mean of norm_u: {np.mean(list_norm_u):.2f}")
     print(f"mean number of step: {np.mean(nb_steps_episode):.2f}")
     print(f"mean of norm_u: {np.mean(sum_norm_u_list):.2f}")
 

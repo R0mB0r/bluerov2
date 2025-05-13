@@ -1,19 +1,37 @@
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
-from control import BlueROVEnv  # Ton environnement Gym ROS2
-from stable_baselines3.common.callbacks import EvalCallback
+from control import BlueROVEnv  # Votre environnement Gym ROS2
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.monitor import Monitor
+from tqdm import tqdm
 
 # Wrapper pour l’environnement (nécessaire pour stable-baselines3)
 def make_env():
     return BlueROVEnv()
 
+class ProgressBarCallback(BaseCallback):
+    """
+    Callback pour mettre à jour la barre de progression tqdm.
+    """
+    def __init__(self, total_timesteps, verbose=0):
+        super(ProgressBarCallback, self).__init__(verbose)
+        self.total_timesteps = total_timesteps
+        self.progress_bar = tqdm(total=total_timesteps, desc="Entraînement en cours")
+
+    def _on_step(self) -> bool:
+        self.progress_bar.n = self.num_timesteps
+        self.progress_bar.refresh()
+        return True
+
+    def _on_training_end(self) -> None:
+        self.progress_bar.close()
+
 def train_model():
     print("🚀 Entraînement PPO du BlueROV en cours...")
 
-    # Environnement d'entraînement monitoré
     train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
 
     model = PPO(
@@ -25,9 +43,11 @@ def train_model():
         ent_coef=0.001
     )
 
-    # Démarrage de l'apprentissage
-    model.learn(total_timesteps=200_000)  
-    # Sauvegarde du modèle
+    total_timesteps = 1_000_000
+    progress_callback = ProgressBarCallback(total_timesteps=total_timesteps)
+
+    model.learn(total_timesteps=total_timesteps, callback=progress_callback)
+
     model.save("./logs/final_model_bluerov_ppo")
     print("✅ Modèle entraîné et sauvegardé.")
 
@@ -35,34 +55,77 @@ def test_model():
     print("🧪 Test du modèle PPO sur BlueROV...")
 
     env = DummyVecEnv([make_env])
-    model = PPO.load("ppo_bluerov")
+    model = PPO.load("./logs/final_model_bluerov_ppo")
 
-    num_episodes = 10
+    num_episodes = 500
+    distances_over_steps = []
+    steps_test = 0
+    nb_steps_episode = []
+    sum_norm_u_list = []
+
+    list_d_delta = []
+    list_norm_u = []
+
+    obs = env.reset()
 
     for episode in range(num_episodes):
         print(f"\n🎯 Épisode {episode + 1} / {num_episodes}")
-        obs = env.reset()
         done = False
         truncated = False
         total_reward = 0
         step = 0
+        sum_norm_u = 0
 
         while not (done or truncated):
             action, _ = model.predict(obs, deterministic=True)
 
-            obs, reward, done, _ = env.step(action)
+            obs, reward, done, info = env.step(action)
 
             total_reward += reward[0]
             step += 1
-            print(f"🔹 Step {step}: Reward={reward[0]:.2f}, Done={done}, Truncated={truncated}")
+            steps_test += 1
 
+            list_d_delta.append(info[0]['d_delta'])
+            list_norm_u.append(info[0]['norm_u'])
+            sum_norm_u += info[0]['norm_u']
+            
             time.sleep(0.1)
 
+        nb_steps_episode.append(step)
+        sum_norm_u_list.append(sum_norm_u)
+
         print(f"✅ Fin de l’épisode {episode + 1} - Total Reward: {total_reward:.2f}, Steps: {step}")
-        time.sleep(1)
 
     env.close()
+    # Print metrics
+    nb_success = info[0]['nb_success']
+    nb_collisions = info[0]['nb_collisions']
+    nb_timeouts = info[0]['nb_timeouts']
+
+    print(f"success rate (%): {nb_success / num_episodes * 100:.2f}%")
+    print(f"collision rate (%): {nb_collisions / num_episodes * 100:.2f}%")
+    print(f"timeout rate (%): {nb_timeouts / num_episodes * 100:.2f}%")
+    print(f"mean of d_delta: {np.mean(list_d_delta):.2f}")
+    print(f"std of d_delta: {np.std(list_d_delta):.2f}")
+    print(f"mean of norm_u: {np.mean(list_norm_u):.2f}")
+    print(f"mean number of step: {np.mean(nb_steps_episode):.2f}")
+    print(f"mean of norm_u: {np.mean(sum_norm_u_list):.2f}")
+
+    plot_distance(steps_test, distances_over_steps)
+
+def plot_distance(steps, distance):
+    steps = np.arange(1, steps + 1)
+    distance = np.array(distance)
+
+    plt.plot(steps, distance, label='Distance to Goal')
+    plt.axhline(y=3, color='r', linestyle='--', label='Threshold (3)')
+
+    plt.xlabel('Steps')
+    plt.ylabel('Distance to Goal')
+    plt.title('Evolution de la distance à l\'objectif en fonction des étapes')
+    plt.legend()
+    plt.show()
 
 if __name__ == "__main__":
     train_model()
-    #test_model()
+    # test_model()
