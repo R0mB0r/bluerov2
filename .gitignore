@@ -32,7 +32,6 @@ __pycache__/
 *.jar
 *.rar
 *.tar
-*.zip
 
 # Logs and databases #
 ######################
