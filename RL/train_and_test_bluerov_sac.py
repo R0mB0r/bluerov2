@@ -99,7 +99,7 @@ def test_model():
 
             sum_norm_u += info[0]['norm_u']
             
-            time.sleep(0.1)
+            #time.sleep(0.1)
         
         nb_steps_episode.append(step)
         sum_norm_u_list.append(sum_norm_u)
@@ -140,7 +140,7 @@ def plot_distance(steps, distance):
 
 
 if __name__ == "__main__":
-    train_model()
-    #test_model()
+    #train_model()
+    test_model()
 
 

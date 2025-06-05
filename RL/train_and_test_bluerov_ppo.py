@@ -2,7 +2,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from control import BlueROVEnv  # Votre environnement Gym ROS2
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.monitor import Monitor
@@ -33,6 +33,7 @@ def train_model():
     print("🚀 Entraînement PPO du BlueROV en cours...")
 
     train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
+    train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
 
     model = PPO(
         policy="MlpPolicy",
@@ -40,7 +41,7 @@ def train_model():
         verbose=1,
         tensorboard_log="./logs/tensorboard/",
         device="cpu",  # Pour éviter l'avertissement GPU inutile
-        ent_coef=0.001
+        
     )
 
     total_timesteps = 1_000_000
@@ -50,12 +51,14 @@ def train_model():
 
     model.save("./logs/final_model_bluerov_ppo")
     print("✅ Modèle entraîné et sauvegardé.")
+    train_env.close()
 
 def test_model():
     print("🧪 Test du modèle PPO sur BlueROV...")
 
-    env = DummyVecEnv([make_env])
-    model = PPO.load("./logs/final_model_bluerov_ppo")
+    test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
+    test_env = VecNormalize(test_env, norm_obs=True, norm_reward=True)
+    model = PPO.load("./logs/final_model_bluerov_ppo", device="cpu")
 
     num_episodes = 500
     distances_over_steps = []
@@ -66,7 +69,8 @@ def test_model():
     list_d_delta = []
     list_norm_u = []
 
-    obs = env.reset()
+    obs = test_env.reset()
+    #print("observation shape:", obs.shape, obs)
 
     for episode in range(num_episodes):
         print(f"\n🎯 Épisode {episode + 1} / {num_episodes}")
@@ -79,7 +83,7 @@ def test_model():
         while not (done or truncated):
             action, _ = model.predict(obs, deterministic=True)
 
-            obs, reward, done, info = env.step(action)
+            obs, reward, done, info = test_env.step(action)
 
             total_reward += reward[0]
             step += 1
@@ -89,14 +93,14 @@ def test_model():
             list_norm_u.append(info[0]['norm_u'])
             sum_norm_u += info[0]['norm_u']
             
-            time.sleep(0.1)
+            #time.sleep(0.1)
 
         nb_steps_episode.append(step)
         sum_norm_u_list.append(sum_norm_u)
 
         print(f"✅ Fin de l’épisode {episode + 1} - Total Reward: {total_reward:.2f}, Steps: {step}")
 
-    env.close()
+    test_env.close()
     # Print metrics
     nb_success = info[0]['nb_success']
     nb_collisions = info[0]['nb_collisions']
@@ -111,7 +115,7 @@ def test_model():
     print(f"mean number of step: {np.mean(nb_steps_episode):.2f}")
     print(f"mean of norm_u: {np.mean(sum_norm_u_list):.2f}")
 
-    plot_distance(steps_test, distances_over_steps)
+    #plot_distance(steps_test, distances_over_steps)
 
 def plot_distance(steps, distance):
     steps = np.arange(1, steps + 1)
@@ -127,5 +131,5 @@ def plot_distance(steps, distance):
     plt.show()
 
 if __name__ == "__main__":
-    train_model()
-    # test_model()
+    #train_model()
+    test_model()

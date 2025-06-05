@@ -55,15 +55,11 @@ class BlueROVEnv(gym.Env):
         self.yaw_error = 0.0
         self.pose_error = np.zeros(3)   # [x, y, z]
 
-        # Variables for velocity calculation
-        self.prev_robot_position = np.zeros(6)
-        self.prev_time = time.time()
-
         # Step counters and flags
         self.num_episodes = 0
         self.total_steps = 0
         self.current_step = 0
-        self.max_steps = 1000
+        self.max_steps = 800
         self.resetting_pose = False
         self.collision = False
         self.timeout = False
@@ -86,7 +82,6 @@ class BlueROVEnv(gym.Env):
 
     def pose_callback(self, msg):
         current_time = time.time()
-        dt = current_time - self.prev_time
         phi, theta, psi = quat2euler([msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z])
         self.robot_position = np.array([
             msg.position.x, msg.position.y, msg.position.z,
@@ -96,9 +91,6 @@ class BlueROVEnv(gym.Env):
         # Add random noise to the robot's position
         sensor_noise = np.random.uniform(0.05, 0.1, size=6)
         self.robot_position += sensor_noise
-
-        # Calculate velocity
-        self.robot_velocity = (self.robot_position - self.prev_robot_position) / dt
 
         # Update previous position and time
         self.prev_robot_position = self.robot_position
@@ -127,8 +119,8 @@ class BlueROVEnv(gym.Env):
         rclpy.spin_once(self.node)
 
         # Modify ocean currents every 100 steps
-        if self.total_steps % 100 == 0:
-            self.modify_ocean_currents()
+        #if self.total_steps % 100 == 0:
+        #    self.modify_ocean_currents()
 
         self.yaw_error = self.goal_position[5] - self.robot_position[5]
         if self.yaw_error > np.pi:
@@ -145,6 +137,8 @@ class BlueROVEnv(gym.Env):
         self.norm_u = np.linalg.norm(self.prev_action)
         
         observation = np.concatenate([[self.yaw_error], self.pose_error, self.prev_action])
+        print("observation shape:", observation.shape, observation)
+
 
         distance_to_goal = np.linalg.norm(self.robot_position[:3] - self.goal_position[:3])
 
@@ -163,6 +157,7 @@ class BlueROVEnv(gym.Env):
 
         # Check for collisions
         if self.robot_position[2] < -60 or self.robot_position[2] > -1:
+            print(f"robot_position[2]: {self.robot_position[2]}")
             self.node.get_logger().info("⚠️ Collision detected!")
             self.collision = True
             self.nb_collisions += 1
@@ -174,6 +169,8 @@ class BlueROVEnv(gym.Env):
             self.timeout = True
 
         truncated = self.collision or self.timeout
+
+        time.sleep(0.1)  # Simulate a delay for thruster response
 
         info = {
             'nb_success': self.nb_success,
@@ -227,6 +224,7 @@ class BlueROVEnv(gym.Env):
         start_time = time.time()
         while self.resetting_pose and (time.time() - start_time < timeout):
             rclpy.spin_once(self.node, timeout_sec=0.1)
+
 
         # Generate random waypoint
         self.goal_position = np.array([
