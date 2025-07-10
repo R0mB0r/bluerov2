@@ -44,30 +44,15 @@ class BlueROVEnv(gym.Env):
         self.ocean_current_publisher = self.node.create_publisher(Vector3, '/current', 10)
 
         # Subscription to the robot's ground truth position
-        self.subscription = self.node.create_subscription(Pose, '/bluerov2/pose_gt', self.pose_callback, 10)
+        self.subscription = self.node.create_subscription(Pose, '/bluerov2/pose_gt', self.pose_callback, 1)
 
         # Service client for setting entity pose
         self.client = self.node.create_client(SetEntityPose, '/world/ocean/set_pose')
 
-        # Initial states
-        self.robot_position = np.zeros(6)
-        self.robot_initial_position = np.zeros(6)
-        self.goal_position = np.zeros(6)
-        self.prev_action = np.zeros(6)
-        self.dist_initial = 0.0
-        self.prev_distance = 0.0
-        self.yaw_error = 0.0
-        self.pose_error = np.zeros(3)   # [x, y, z]
-
         # Step counters and flags
         self.num_episodes = 0
         self.total_steps = 0
-        self.current_step = 0
         self.max_steps = 800
-        self.resetting_pose = False
-        self.collision = False
-        self.timeout = False
-        self.goal_reached = False
 
         # Metrics initialization
         self.nb_success = 0
@@ -89,7 +74,6 @@ class BlueROVEnv(gym.Env):
         signal.signal(signal.SIGINT, signal_handler)
 
     def pose_callback(self, msg):
-        current_time = time.time()
         phi, theta, psi = quat2euler([msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z])
         self.robot_position = np.array([
             msg.position.x, msg.position.y, msg.position.z,
@@ -102,12 +86,6 @@ class BlueROVEnv(gym.Env):
 
         self.pose_updated = True
 
-        # Update previous position and time
-        self.prev_robot_position = self.robot_position
-        self.prev_time = current_time
-
-        if self.resetting_pose and np.linalg.norm(self.robot_position[:3]) < 0.05:
-            self.resetting_pose = False
 
     def step(self, action):
         """Apply forces to thrusters and return the new observation."""
@@ -127,34 +105,23 @@ class BlueROVEnv(gym.Env):
             msg.data = float(scaled_action[i])
             self.thruster_publishers[topic].publish(msg)
 
-        self.prev_action = scaled_action
+        rclpy.spin_once(self.node)
 
-        # Wait for the next pose update
-        
-        while not self.pose_updated:
-            rclpy.spin_once(self.node, timeout_sec=0.1)
-        
 
-        # Modify ocean currents every 100 steps
-        #if self.total_steps % 100 == 0:
-            #self.modify_ocean_currents()
-
+        # Observation calculation
         self.yaw_error = self.goal_position[5] - self.robot_position[5]
-        if self.yaw_error > np.pi:
-            self.yaw_error -= 2 * np.pi
-        elif self.yaw_error < -np.pi:
-            self.yaw_error += 2 * np.pi
-
+        self.yaw_error = 2 * np.arctan(np.tan(self.yaw_error / 2))
+        self.yaw_error = np.array([self.yaw_error])
         self.pose_error = self.robot_position[:3] - self.goal_position[:3]
+        self.prev_action = scaled_action
+        observation = np.concatenate([self.yaw_error, self.pose_error, self.prev_action])
 
-        # Calculate d_delta
+
+        # Metrics calculation
         self.d_delta = distance_point_segment_3d_cross(self.robot_initial_position[:3], self.goal_position[:3], self.robot_position[:3])
-
-        # Calculate norm_u
         self.norm_u = np.linalg.norm(self.prev_action)
-
-        observation = np.concatenate([[self.yaw_error], self.pose_error, self.prev_action])
-
+        
+        # Reward calculation
         distance_to_goal = np.linalg.norm(self.robot_position[:3] - self.goal_position[:3])
 
         if distance_to_goal >= self.prev_distance:
@@ -172,7 +139,6 @@ class BlueROVEnv(gym.Env):
             self.nb_success += 1
             reward = 500.0  # Bonus for reaching the goal
 
-        # Check for collisions
         if self.robot_position[2] < -60 or self.robot_position[2] > -1:
             print(f"robot_position[2]: {self.robot_position[2]}")
             self.node.get_logger().info("⚠️ Collision detected!")
@@ -187,10 +153,8 @@ class BlueROVEnv(gym.Env):
 
         truncated = self.collision or self.timeout
 
-        if terminated or truncated:
-            print(f"🏁 Distance finale robot-goal : {distance_to_goal:.2f}")
-
-
+        time.sleep(0.1)  # Simulate a delay for thruster response
+    
 
         info = {
             'nb_success': self.nb_success,
@@ -234,7 +198,9 @@ class BlueROVEnv(gym.Env):
         # 1. Arrêt des propulseurs
         self.stop_all_thrusters()
 
-        # 2. Préparation du reset de la pose
+        time.sleep(0.1)
+
+        # Activate the flag to wait for the new position in pose_callback
         self.resetting_pose = True
 
         # 3. Génération d'un yaw aléatoire
@@ -257,37 +223,22 @@ class BlueROVEnv(gym.Env):
         future = self.client.call_async(req)
         rclpy.spin_until_future_complete(self.node, future)
 
-        if future.result() is not None and future.result().success:
-            self.node.get_logger().info("Position successfully teleported.")
-        else:
-            self.node.get_logger().warn("⚠️ Failed to reset position.")
+        self.robot_initial_position = np.array([
+            req.pose.position.x,
+            req.pose.position.y,
+            req.pose.position.z,
+            0.0, 0.0, yaw
+        ])
 
-        # 5. Attente active que la pose soit effectivement prise en compte
-        timeout = 5.0  # seconds
+        # Active waiting loop until pose_callback detects the reset
+        timeout = 2.0  # seconds
         start_time = time.time()
-        while self.resetting_pose and (time.time() - start_time < timeout):
+        rclpy.spin_once(self.node, timeout_sec=0.1)
+        distance_to_initial = np.linalg.norm(self.robot_position[:3] - self.robot_initial_position[:3])
+        while distance_to_initial > 0.2 and (time.time() - start_time) < timeout:
             rclpy.spin_once(self.node, timeout_sec=0.1)
-
-        # 6. Détermination de la position de but
-        if self.use_goal_file:
-            goal_position = self.load_goal_positions(self.goal_position_idx)
-            if goal_position is not None:
-                self.goal_position = goal_position
-                self.node.get_logger().info(f"Goal position loaded from file: {self.goal_position}")
-                self.goal_position_idx += 1
-            else:
-                self.goal_position = np.zeros(6)
-                self.node.get_logger().warn("⚠️ No goal position found in file, using zeros.")
-        else:
-            # --- Génération aléatoire ---
-            self.goal_position = np.array([
-                self.np_random.uniform(-20.0, 20.0),
-                self.np_random.uniform(-20.0, 20.0),
-                self.np_random.uniform(-60.0, -1.0),
-                0.0, 0.0, 0.0
-            ])
-            #self.goal_position = np.array([-10.0, 0.0, -20.0, 0.0, 0.0, 0.0])  # Fixed goal position for testing
-            self.node.get_logger().info(f"New random goal position: {self.goal_position}")
+            distance_to_initial = np.linalg.norm(self.robot_position[:3] - self.robot_initial_position[:3])
+        print("time for  resetting", time.time() - start_time)
 
         distance_to_goal = np.linalg.norm(self.robot_position[:3] - self.goal_position[:3])
         print(f"📏 Distance initiale robot-goal : {distance_to_goal:.2f}")
@@ -304,20 +255,12 @@ class BlueROVEnv(gym.Env):
 
         # 8. Calcul des erreurs initiales
         self.yaw_error = self.goal_position[5] - self.robot_position[5]
-        if self.yaw_error > np.pi:
-            self.yaw_error -= 2 * np.pi
-        elif self.yaw_error < -np.pi:
-            self.yaw_error += 2 * np.pi
+        self.yaw_error = 2 * np.arctan(np.tan(self.yaw_error / 2))
+        self.yaw_error = np.array([self.yaw_error])
         self.pose_error = self.robot_position[:3] - self.goal_position[:3]
 
-        # 9. Sécurité sur les erreurs
-        if self.yaw_error is None:
-            self.yaw_error = 0.0
-        if self.pose_error is None:
-            self.pose_error = np.zeros(3)
-
-        # 10. Construction de l'observation initiale
-        obs = np.concatenate([[self.yaw_error], self.pose_error, self.prev_action])
+        # Concatenate yaw error, position error, and previous action
+        obs = np.concatenate([self.yaw_error, self.pose_error, self.prev_action])
 
         return obs, {}
 

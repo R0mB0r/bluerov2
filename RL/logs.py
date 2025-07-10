@@ -4,7 +4,7 @@ import numpy as np
 # Charger les distances et rewards depuis le fichier texte (format: distance,reward)
 distances = []
 rewards = []
-with open("RL/distances_over_episodes_test_3.txt", "r") as f:
+with open("RL/distances_over_episodes.txt", "r") as f:
     for line in f:
         try:
             parts = line.strip().split(',')
@@ -39,7 +39,7 @@ valid = success_counts > 0
 mean_success_rewards[valid] = cumulative_success_rewards[valid] / success_counts[valid]
 
 # Pourcentage glissant de succès sur 100 épisodes
-window = 100
+window = 10
 sliding_success_percent = np.convolve(below, np.ones(window, dtype=int), 'valid') / window * 100
 sliding_episodes = np.arange(window - 1, len(distances))
 

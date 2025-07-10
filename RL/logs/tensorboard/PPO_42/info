@@ -1,6 +1,0 @@
-Algorithme PPO:
-- training steps -> 1_000_000
-- episode max steps -> 800
-- no time.sleep()
-
-Observation -> acune convergence vers un maximum

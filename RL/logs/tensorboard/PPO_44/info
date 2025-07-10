@@ -1,5 +1,0 @@
-Algorithme PPO:
-- training steps -> 1_000_000
-- episode max_steps -> 800
-- time.sleep(0.05)
-

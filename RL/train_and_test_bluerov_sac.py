@@ -2,10 +2,9 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3 import SAC
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import VecNormalize
-from env import BlueROVEnv  # Votre environnement Gym ROS2
-#from control import BlueROVEnv  # Assurez-vous que le chemin est correct
+from stable_baselines3.common.vec_env import DummyVecEnv
+#from control import BlueROVEnv  # Votre environnement Gym ROS2
+from bluerov_env import BlueROVEnv  # Votre environnement Gym ROS2
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.monitor import Monitor
 from tqdm import tqdm
@@ -13,11 +12,7 @@ import os
 
 
 # Dossier de sauvegarde global pour le modèle et la normalisation
-SAVE_DIR = "SAC_model_3"
-
-# Wrapper pour l’environnement (nécessaire pour stable-baselines3)
-def make_env():
-    return BlueROVEnv()
+SAVE_DIR = "SAC_model_1"
 
 class ProgressBarCallback(BaseCallback):
     """
@@ -41,9 +36,8 @@ def train_model():
 
     os.makedirs(SAVE_DIR, exist_ok=True)
 
-    train_env = make_vec_env(lambda: BlueROVEnv(), n_envs=1)
-    #train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
-
+    train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
+    
     model = SAC(
         policy="MlpPolicy",
         env=train_env,
@@ -68,13 +62,11 @@ def train_model():
 def test_model():
     print("🧪 Test du modèle SAC sur BlueROV...")
 
-    print(f"Chargement du modèle et de la normalisation depuis {SAVE_DIR}...")
+    #print(f"Chargement du modèle et de la normalisation depuis {SAVE_DIR}...")
 
-    test_env = make_vec_env(lambda: BlueROVEnv(), n_envs=1)
-    #test_env = VecNormalize.load(os.path.join(SAVE_DIR, "vecnormalize_sac.pkl"), venv=test_env)
-    #test_env.training = False
-    #test_env.norm_reward = False
-    model = SAC.load(os.path.join(SAVE_DIR, "final_model_bluerov_sac.zip"), env=test_env)
+    test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
+    #model = SAC.load(os.path.join(SAVE_DIR, "final_model_bluerov_sac.zip"), env=test_env)
+    model = SAC.load("logs/final_model_bluerov_sac.zip", env=test_env)
 
     num_episodes = 500
     distances_over_steps = []
