@@ -1,0 +1,4 @@
+Algorithme SAC:
+- training steps -> 1_000_000
+- episode max steps -> 800
+- no time.sleep(0.1)

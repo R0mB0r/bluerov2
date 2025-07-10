@@ -1,19 +1,12 @@
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-from stable_baselines3 import SAC
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import VecNormalize
-from env import BlueROVEnv  # Votre environnement Gym ROS2
-#from control import BlueROVEnv  # Assurez-vous que le chemin est correct
+from stable_baselines3 import DDPG
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from control import BlueROVEnv  # Votre environnement Gym ROS2
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.monitor import Monitor
 from tqdm import tqdm
-import os
-
-
-# Dossier de sauvegarde global pour le modèle et la normalisation
-SAVE_DIR = "SAC_model_3"
 
 # Wrapper pour l’environnement (nécessaire pour stable-baselines3)
 def make_env():
@@ -37,14 +30,12 @@ class ProgressBarCallback(BaseCallback):
         self.progress_bar.close()
 
 def train_model():
-    print(f"🚀 Entraînement SAC du BlueROV en cours... (sauvegarde dans {SAVE_DIR})")
+    print("🚀 Entraînement ddpg du BlueROV en cours...")
 
-    os.makedirs(SAVE_DIR, exist_ok=True)
+    train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
+    train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
 
-    train_env = make_vec_env(lambda: BlueROVEnv(), n_envs=1)
-    #train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
-
-    model = SAC(
+    model = DDPG(
         policy="MlpPolicy",
         env=train_env,
         verbose=1,
@@ -52,29 +43,21 @@ def train_model():
         device="cpu",  # Pour éviter l'avertissement GPU inutile
     )
 
-
-    # Démarrage de l'apprentissage avec barre de progression
     total_timesteps = 1_000_000
     progress_callback = ProgressBarCallback(total_timesteps=total_timesteps)
 
     model.learn(total_timesteps=total_timesteps, callback=progress_callback)
 
-    # Sauvegarde du modèle et de la normalisation dans le dossier SAVE_DIR
-    model.save(os.path.join(SAVE_DIR, "final_model_bluerov_sac"))
-    #train_env.save(os.path.join(SAVE_DIR, "vecnormalize_sac.pkl"))
-    print(f"✅ Modèle entraîné et sauvegardé dans le dossier {SAVE_DIR}.")
+    model.save("./logs/final_model_bluerov_ddpg")
+    print("✅ Modèle entraîné et sauvegardé.")
     train_env.close()
 
 def test_model():
-    print("🧪 Test du modèle SAC sur BlueROV...")
+    print("🧪 Test du modèle DDPG sur BlueROV...")
 
-    print(f"Chargement du modèle et de la normalisation depuis {SAVE_DIR}...")
-
-    test_env = make_vec_env(lambda: BlueROVEnv(), n_envs=1)
-    #test_env = VecNormalize.load(os.path.join(SAVE_DIR, "vecnormalize_sac.pkl"), venv=test_env)
-    #test_env.training = False
-    #test_env.norm_reward = False
-    model = SAC.load(os.path.join(SAVE_DIR, "final_model_bluerov_sac.zip"), env=test_env)
+    test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
+    test_env = VecNormalize(test_env, norm_obs=True, norm_reward=True)
+    model = DDPG.load("./logs/final_model_bluerov_ddpg", device="cpu")
 
     num_episodes = 500
     distances_over_steps = []
@@ -85,10 +68,10 @@ def test_model():
     list_d_delta = []
     list_norm_u = []
 
-    # Reset de l'environnement
     obs = test_env.reset()
 
     for episode in range(num_episodes):
+        print(f"\n🎯 Épisode {episode + 1} / {num_episodes}")
         done = False
         truncated = False
         total_reward = 0
@@ -97,27 +80,20 @@ def test_model():
 
         while not (done or truncated):
             action, _ = model.predict(obs, deterministic=True)
-
             obs, reward, done, info = test_env.step(action)
 
             total_reward += reward[0]
             step += 1
             steps_test += 1
-        
-            #print(f"🔹 Step {step}: Reward={reward[0]:.2f}, Done={done}, Truncated={truncated}")
 
-            # Enregistrement des distances et des normes
             list_d_delta.append(info[0]['d_delta'])
             list_norm_u.append(info[0]['norm_u'])
-
             sum_norm_u += info[0]['norm_u']
-            
-            time.sleep(0.1)
-        
+
         nb_steps_episode.append(step)
         sum_norm_u_list.append(sum_norm_u)
-        
-        
+
+        print(f"✅ Fin de l’épisode {episode + 1} - Total Reward: {total_reward:.2f}, Steps: {step}")
 
     test_env.close()
     # Print metrics
@@ -134,7 +110,6 @@ def test_model():
     print(f"mean number of step: {np.mean(nb_steps_episode):.2f}")
     print(f"mean of norm_u: {np.mean(sum_norm_u_list):.2f}")
 
-
     #plot_distance(steps_test, distances_over_steps)
 
 def plot_distance(steps, distance):
@@ -150,9 +125,6 @@ def plot_distance(steps, distance):
     plt.legend()
     plt.show()
 
-
-
 if __name__ == "__main__":
-    #train_model()
+    train_model()
     test_model()
-

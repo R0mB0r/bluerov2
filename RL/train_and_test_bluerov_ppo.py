@@ -2,15 +2,14 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from control import BlueROVEnv  # Votre environnement Gym ROS2
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.monitor import Monitor
 from tqdm import tqdm
 
-# Wrapper pour l’environnement (nécessaire pour stable-baselines3)
-def make_env():
-    return BlueROVEnv()
+
 
 class ProgressBarCallback(BaseCallback):
     """
@@ -32,7 +31,7 @@ class ProgressBarCallback(BaseCallback):
 def train_model():
     print("🚀 Entraînement PPO du BlueROV en cours...")
 
-    train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
+    train_env = make_vec_env(lambda: BlueROVEnv(seed=42), n_envs=1)
     train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
 
     model = PPO(
@@ -40,8 +39,7 @@ def train_model():
         env=train_env,
         verbose=1,
         tensorboard_log="./logs/tensorboard/",
-        device="cpu",  # Pour éviter l'avertissement GPU inutile
-        
+        device="cpu",  # Pour éviter l'avertissement GPU inutile    
     )
 
     total_timesteps = 1_000_000
@@ -49,17 +47,19 @@ def train_model():
 
     model.learn(total_timesteps=total_timesteps, callback=progress_callback)
 
+    # Sauvegarde du modèle
     model.save("./logs/final_model_bluerov_ppo")
+    train_env.save("logs/vecnormalize_ppo.pkl")
     print("✅ Modèle entraîné et sauvegardé.")
     train_env.close()
 
 def test_model():
     print("🧪 Test du modèle PPO sur BlueROV...")
 
-    test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
-    test_env = VecNormalize(test_env, norm_obs=True, norm_reward=True)
-    model = PPO.load("./logs/final_model_bluerov_ppo", device="cpu")
-
+    test_env = make_vec_env(lambda: BlueROVEnv(seed=42), n_envs=1)
+    test_env = VecNormalize.load("logs/vecnormalize_ppo.pkl", venv=test_env)
+    model = PPO.load("./logs/final_model_bluerov_ppo.zip", device="cpu")
+ 
     num_episodes = 500
     distances_over_steps = []
     steps_test = 0
@@ -93,7 +93,6 @@ def test_model():
             list_norm_u.append(info[0]['norm_u'])
             sum_norm_u += info[0]['norm_u']
             
-            #time.sleep(0.1)
 
         nb_steps_episode.append(step)
         sum_norm_u_list.append(sum_norm_u)
@@ -131,5 +130,5 @@ def plot_distance(steps, distance):
     plt.show()
 
 if __name__ == "__main__":
-    #train_model()
+    train_model()
     test_model()
