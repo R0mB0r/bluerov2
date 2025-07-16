@@ -4,12 +4,14 @@ import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
-from control import BlueROVEnv  # Votre environnement Gym ROS2
+from bluerov_env import BlueROVEnv  # Votre environnement Gym ROS2
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.monitor import Monitor
 from tqdm import tqdm
 
-
+# Seed pour la reproductibilité
+TRAIN_SEED = 42
+TEST_SEED = 123
 
 class ProgressBarCallback(BaseCallback):
     """
@@ -31,7 +33,7 @@ class ProgressBarCallback(BaseCallback):
 def train_model():
     print("🚀 Entraînement PPO du BlueROV en cours...")
 
-    train_env = make_vec_env(lambda: BlueROVEnv(seed=42), n_envs=1)
+    train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=TRAIN_SEED))])
     train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
 
     model = PPO(
@@ -56,8 +58,8 @@ def train_model():
 def test_model():
     print("🧪 Test du modèle PPO sur BlueROV...")
 
-    test_env = make_vec_env(lambda: BlueROVEnv(seed=42), n_envs=1)
-    test_env = VecNormalize.load("logs/vecnormalize_ppo.pkl", venv=test_env)
+    test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=TEST_SEED))])
+    test_env = VecNormalize.load("./logs/vecnormalize_ppo.pkl", venv=test_env)
     model = PPO.load("./logs/final_model_bluerov_ppo.zip", device="cpu")
  
     num_episodes = 500
@@ -130,5 +132,5 @@ def plot_distance(steps, distance):
     plt.show()
 
 if __name__ == "__main__":
-    train_model()
+    #train_model()
     test_model()

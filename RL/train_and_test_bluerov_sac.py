@@ -10,9 +10,12 @@ from stable_baselines3.common.monitor import Monitor
 from tqdm import tqdm
 import os
 
+# Seed pour la reproductibilité
+TRAIN_SEED = 42
+TEST_SEED = 123
 
 # Dossier de sauvegarde global pour le modèle et la normalisation
-SAVE_DIR = "SAC_model_1"
+SAVE_DIR = "SAC_model_2"
 
 class ProgressBarCallback(BaseCallback):
     """
@@ -36,7 +39,7 @@ def train_model():
 
     os.makedirs(SAVE_DIR, exist_ok=True)
 
-    train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
+    train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=TRAIN_SEED))])
     
     model = SAC(
         policy="MlpPolicy",
@@ -64,9 +67,9 @@ def test_model():
 
     #print(f"Chargement du modèle et de la normalisation depuis {SAVE_DIR}...")
 
-    test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv())])
-    #model = SAC.load(os.path.join(SAVE_DIR, "final_model_bluerov_sac.zip"), env=test_env)
-    model = SAC.load("logs/final_model_bluerov_sac.zip", env=test_env)
+    test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=TEST_SEED))])
+    model = SAC.load(os.path.join(SAVE_DIR, "final_model_bluerov_sac.zip"), env=test_env)
+    #model = SAC.load("logs/final_model_bluerov_sac.zip", env=test_env)
 
     num_episodes = 500
     distances_over_steps = []

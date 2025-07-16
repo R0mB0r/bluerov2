@@ -5,8 +5,12 @@ from math import inf
 from ros_control import BlueRovROSInterface
 
 class BlueROVEnv(gym.Env):
-    def __init__(self):
+    def __init__(self, seed=None):
         super(BlueROVEnv, self).__init__()
+
+        if seed is not None:
+            self.np_random = np.random.default_rng(seed)
+            self.seed_value = seed
 
         self.ros = BlueRovROSInterface()
 
@@ -17,7 +21,7 @@ class BlueROVEnv(gym.Env):
         # Step counters
         self.num_episodes = 0
         self.total_steps = 0
-        self.max_steps = 800
+        self.max_steps = 1000
 
         # Metrics initialization
         self.nb_success = 0
@@ -27,7 +31,7 @@ class BlueROVEnv(gym.Env):
         self.norm_u = 0
 
         # File to log distances over episodes
-        self.distance_file = open("distances_over_episodes.txt", "w")
+        self.distance_file = open("distances_over_episodes_test.txt", "w")
 
     def step(self, action):
         """Apply forces to thrusters and return the new observation."""
@@ -41,6 +45,8 @@ class BlueROVEnv(gym.Env):
 
         # Publish thruster commands
         self.ros.publish_thrusters(scaled_action)
+
+        time.sleep(0.05)  # Wait for the thrusters to apply forces
 
         # Observation calculation
         self.yaw_error = self.goal_position[5] - self.ros.robot_position[5]
@@ -64,7 +70,7 @@ class BlueROVEnv(gym.Env):
         if distance_to_goal >= self.prev_distance:
             reward = -10.0
         else:
-            reward = 40 * np.exp(-distance_to_goal / 20)
+            reward = np.exp(-distance_to_goal / 20)
 
         self.prev_distance = distance_to_goal
 
@@ -95,8 +101,6 @@ class BlueROVEnv(gym.Env):
             self.distance_file.write(f"{distance_to_goal},{self.episodes_reward}\n")
             self.distance_file.flush()
 
-        time.sleep(0.1)  # Simulate a delay for thruster response
-
         info = {
             'nb_success': self.nb_success,
             'nb_collisions': self.nb_collisions,
@@ -124,7 +128,7 @@ class BlueROVEnv(gym.Env):
         self.resetting_pose = True
 
         # Generate random yaw angle (ψ)
-        yaw = np.random.uniform(-np.pi, np.pi)
+        yaw = self.np_random.uniform(-np.pi, np.pi)
 
         # Set the robot's pose
         self.ros.set_pose(yaw)
@@ -133,9 +137,9 @@ class BlueROVEnv(gym.Env):
 
         # Generate random waypoint
         self.goal_position = np.array([
-            np.random.uniform(-20.0, 20.0),
-            np.random.uniform(-20.0, 20.0),
-            np.random.uniform(-60.0, -1.0),
+            self.np_random.uniform(-20.0, 20.0),  # x
+            self.np_random.uniform(-20.0, 20.0),  # y
+            self.np_random.uniform(-60.0, -1.0),  # z
             0.0, 0.0, 0.0
         ])
         self.ros.node.get_logger().info(f"New goal position: {self.goal_position}")
