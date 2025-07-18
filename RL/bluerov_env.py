@@ -3,9 +3,10 @@ import numpy as np
 import time
 from math import inf
 from ros_control import BlueRovROSInterface
+import os
 
 class BlueROVEnv(gym.Env):
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, save_dir=None):
         super(BlueROVEnv, self).__init__()
 
         if seed is not None:
@@ -31,7 +32,12 @@ class BlueROVEnv(gym.Env):
         self.norm_u = 0
 
         # File to log distances over episodes
-        self.distance_file = open("distances_over_episodes_test.txt", "w")
+        if save_dir is None:
+            save_dir = "./RL"
+        os.makedirs(save_dir, exist_ok=True)
+        self.distance_file_path = os.path.join(save_dir, "distances_over_episodes.txt")
+        self.distance_file = open(self.distance_file_path, "w")
+
 
     def step(self, action):
         """Apply forces to thrusters and return the new observation."""
@@ -46,7 +52,7 @@ class BlueROVEnv(gym.Env):
         # Publish thruster commands
         self.ros.publish_thrusters(scaled_action)
 
-        time.sleep(0.05)  # Wait for the thrusters to apply forces
+        time.sleep(0.1)  # Wait for the thrusters to apply forces
 
         # Observation calculation
         self.yaw_error = self.goal_position[5] - self.ros.robot_position[5]
@@ -164,6 +170,8 @@ class BlueROVEnv(gym.Env):
     
     def close(self):
         """Stop all thrusters and shutdown the ROS node."""
+        if hasattr(self, "distance_file") and self.distance_file:
+            self.distance_file.close()
         self.ros.close()
         print("Environment closed.")
 

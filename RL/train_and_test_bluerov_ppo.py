@@ -1,17 +1,25 @@
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
-from bluerov_env import BlueROVEnv  # Votre environnement Gym ROS2
+from bluerov_env import BlueROVEnv
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.monitor import Monitor
 from tqdm import tqdm
+import os
+import re
 
-# Seed pour la reproductibilité
-TRAIN_SEED = 42
-TEST_SEED = 123
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train or test PPO on BlueROVEnv")
+    parser.add_argument('--mode', choices=['train', 'test'], required=True, help="Mode: train or test")
+    parser.add_argument('--train-seed', type=int, default=42, help="Seed for training")
+    parser.add_argument('--test-seed', type=int, default=123, help="Seed for testing")
+    parser.add_argument('--timesteps', type=int, default=1_000_000, help="Total timesteps for training")
+    parser.add_argument('--episodes', type=int, default=500, help="Number of episodes for testing")
+    return parser.parse_args()
 
 class ProgressBarCallback(BaseCallback):
     """
@@ -30,10 +38,26 @@ class ProgressBarCallback(BaseCallback):
     def _on_training_end(self) -> None:
         self.progress_bar.close()
 
-def train_model():
-    print("🚀 Entraînement PPO du BlueROV en cours...")
+def get_savedir(mode):
+    base = "PPO_savedir_"
+    dirs = [d for d in os.listdir(".") if re.match(rf"{base}\d+$", d)]
+    pairs = sorted([int(d.split("_")[-1]) for d in dirs if int(d.split("_")[-1]) % 2 == 0])
+    if mode == "train":
+        next_pair = pairs[-1] + 2 if pairs else 0
+        savedir = f"{base}{next_pair}"
+        os.makedirs(savedir, exist_ok=True)
+        return savedir
+    elif mode == "test":
+        if not pairs:
+            raise FileNotFoundError("Aucun dossier de sauvegarde pair trouvé pour le test.")
+        savedir = f"{base}{pairs[-1]}"
+        return savedir
 
-    train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=TRAIN_SEED))])
+def train_model(train_seed, total_timesteps):
+    savedir = get_savedir("train")
+    print(f"🚀 Entraînement PPO du BlueROV, dossier de sauvegarde : {savedir}")
+
+    train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=train_seed, save_dir=savedir))])
     train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
 
     model = PPO(
@@ -44,25 +68,24 @@ def train_model():
         device="cpu",  # Pour éviter l'avertissement GPU inutile    
     )
 
-    total_timesteps = 1_000_000
     progress_callback = ProgressBarCallback(total_timesteps=total_timesteps)
 
     model.learn(total_timesteps=total_timesteps, callback=progress_callback)
 
     # Sauvegarde du modèle
-    model.save("./logs/final_model_bluerov_ppo")
-    train_env.save("logs/vecnormalize_ppo.pkl")
+    model.save(os.path.join(savedir, "final_model_bluerov_ppo"))
+    train_env.save(os.path.join(savedir, "vecnormalize_ppo.pkl"))
     print("✅ Modèle entraîné et sauvegardé.")
     train_env.close()
 
-def test_model():
-    print("🧪 Test du modèle PPO sur BlueROV...")
+def test_model(test_seed, num_episodes):
+    savedir = get_savedir("test")
+    print(f"🧪 Test du modèle PPO sur BlueROV, dossier utilisé : {savedir}")
 
-    test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=TEST_SEED))])
-    test_env = VecNormalize.load("./logs/vecnormalize_ppo.pkl", venv=test_env)
-    model = PPO.load("./logs/final_model_bluerov_ppo.zip", device="cpu")
+    test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=test_seed, save_dir=savedir))])
+    test_env = VecNormalize.load(os.path.join(savedir, "vecnormalize_ppo.pkl"), venv=test_env)
+    model = PPO.load(os.path.join(savedir, "final_model_bluerov_ppo.zip"), device="cpu")
  
-    num_episodes = 500
     distances_over_steps = []
     steps_test = 0
     nb_steps_episode = []
@@ -132,5 +155,8 @@ def plot_distance(steps, distance):
     plt.show()
 
 if __name__ == "__main__":
-    #train_model()
-    test_model()
+    args = parse_args()
+    if args.mode == "train":
+        train_model(args.train_seed, args.timesteps)
+    elif args.mode == "test":
+        test_model(args.test_seed, args.episodes)
