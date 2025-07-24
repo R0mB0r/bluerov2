@@ -77,7 +77,8 @@ def train_model(train_seed, total_timesteps):
     train_env.close()
 
 def test_model(test_seed, num_episodes):
-    savedir = get_savedir("test")
+    #savedir = get_savedir("test")
+    savedir = "logs"  # Utiliser le dossier de logs par défaut
     print(f"🧪 Test du modèle PPO sur BlueROV, dossier utilisé : {savedir}")
 
     test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=test_seed, save_dir=savedir, mode="test"))])

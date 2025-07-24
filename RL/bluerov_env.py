@@ -88,7 +88,7 @@ class BlueROVEnv(gym.Env):
         if distance_to_goal >= self.prev_distance:
             reward = -10.0
         else:
-            reward = np.exp(-distance_to_goal / 20)
+            reward = 40*np.exp(-distance_to_goal / 20)
 
         self.prev_distance = distance_to_goal
 
