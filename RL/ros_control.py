@@ -1,6 +1,6 @@
 import rclpy
 from std_msgs.msg import Float64
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Vector3
 from ros_gz_interfaces.srv import SetEntityPose
 import signal
 import sys
@@ -27,6 +27,9 @@ class BlueRovROSInterface:
         ]
         self.thruster_publishers = {topic: self.node.create_publisher(Float64, topic, 10) for topic in self.thruster_topics}
 
+        # Initialize ocean_current publisher
+        self.ocean_current_publisher = self.node.create_publisher(Vector3, '/current', 10)
+        
         # Initialize pose_gt subscriber
         self.subscription = self.node.create_subscription(Pose, '/bluerov2/pose_gt', self.pose_callback, 1)
 
@@ -104,6 +107,14 @@ class BlueRovROSInterface:
             msg = Float64()
             msg.data = 0.0
             self.thruster_publishers[topic].publish(msg)
+
+    def set_ocean_currents(self, cv, cha, cva):
+        """Set ocean currents to a random value."""
+        msg = Vector3()
+        msg.x = cv*np.cos(cva)*np.cos(cha)
+        msg.y = cv*np.cos(cva)*np.sin(cha)
+        msg.z = cv*np.sin(cva)
+        self.ocean_current_publisher.publish(msg)
 
     
     def close(self):

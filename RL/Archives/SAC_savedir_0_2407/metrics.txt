@@ -1,0 +1,55 @@
+===== Résultats du test =====
+Nombre d'épisodes : 5
+Seed utilisée : 123
+success rate (%): 100.00%
+collision rate (%): 0.00%
+timeout rate (%): 0.00%
+mean of d_delta: 2.62
+std of d_delta: 2.08
+mean of norm_u: 1.92
+mean number of step: 236.80
+mean of sum of norm_u: 453.71
+--------------------------------------------------
+
+===== Résultats du test =====
+Nombre d'épisodes : 5
+Seed utilisée : 123
+success rate (%): 100.00%
+collision rate (%): 0.00%
+timeout rate (%): 0.00%
+mean of d_delta: 3.96
+std of d_delta: 2.76
+mean of norm_u: 1.89
+mean number of step: 384.60
+mean of sum of norm_u: 727.41
+Note: Test des courants marins
+--------------------------------------------------
+
+===== Résultats du test =====
+Nombre d'épisodes : 5
+Seed utilisée : 123
+success rate (%): 100.00%
+collision rate (%): 0.00%
+timeout rate (%): 0.00%
+mean of d_delta: 4.17
+std of d_delta: 2.34
+mean of norm_u: 1.81
+mean number of step: 386.80
+mean of sum of norm_u: 699.95
+Note: Test des courants marins
+--------------------------------------------------
+
+===== Résultats du test =====
+Nombre d'épisodes : 100
+Seed utilisée : 123
+success rate (%): 93.00%
+collision rate (%): 2.00%
+timeout rate (%): 5.00%
+mean of d_delta: 4.41
+std of d_delta: 2.76
+mean of norm_u: 1.80
+mean number of step: 444.82
+mean of sum of norm_u: 798.68
+Note: Test des courants marins
+--------------------------------------------------
+

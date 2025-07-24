@@ -1,0 +1,79 @@
+===== Résultats du test =====
+Nombre d'épisodes : 5
+Seed utilisée : 123
+success rate (%): 100.00%
+collision rate (%): 0.00%
+timeout rate (%): 0.00%
+mean of d_delta: 3.21
+std of d_delta: 2.27
+mean of norm_u: 2.11
+mean number of step: 314.00
+mean of sum of norm_u: 661.25
+Notes : 
+--------------------------------------------------===== Résultats du test =====
+Nombre d'épisodes : 5
+Seed utilisée : 123
+success rate (%): 100.00%
+collision rate (%): 0.00%
+timeout rate (%): 0.00%
+mean of d_delta: 3.22
+std of d_delta: 2.26
+mean of norm_u: 2.11
+mean number of step: 314.00
+mean of sum of norm_u: 661.71
+Notes : 
+--------------------------------------------------
+
+===== Résultats du test =====
+Nombre d'épisodes : 5
+Seed utilisée : 123
+success rate (%): 100.00%
+collision rate (%): 0.00%
+timeout rate (%): 0.00%
+mean of d_delta: 2.40
+std of d_delta: 1.37
+mean of norm_u: 1.99
+mean number of step: 234.60
+mean of sum of norm_u: 467.76
+--------------------------------------------------
+
+===== Résultats du test =====
+Nombre d'épisodes : 5
+Seed utilisée : 123
+success rate (%): 100.00%
+collision rate (%): 0.00%
+timeout rate (%): 0.00%
+mean of d_delta: 2.37
+std of d_delta: 1.41
+mean of norm_u: 2.00
+mean number of step: 235.60
+mean of sum of norm_u: 472.02
+--------------------------------------------------
+
+===== Résultats du test =====
+Nombre d'épisodes : 500
+Seed utilisée : 123
+success rate (%): 99.00%
+collision rate (%): 0.00%
+timeout rate (%): 1.00%
+mean of d_delta: 4.59
+std of d_delta: 5.41
+mean of norm_u: 2.00
+mean number of step: 342.64
+mean of sum of norm_u: 684.68
+Note: Algo PPO time.sleep(0.1) coeff_multiplicatif_reward = 1--------------------------------------------------
+
+===== Résultats du test =====
+Nombre d'épisodes : 500
+Seed utilisée : 123
+success rate (%): 99.40%
+collision rate (%): 0.40%
+timeout rate (%): 0.20%
+mean of d_delta: 3.96
+std of d_delta: 3.79
+mean of norm_u: 1.99
+mean number of step: 329.95
+mean of sum of norm_u: 657.48
+Note: Algo PPO time.sleep(0.1) coeff_multiplicatif_reward = 1
+--------------------------------------------------
+

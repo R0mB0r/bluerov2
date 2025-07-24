@@ -6,7 +6,7 @@ from ros_control import BlueRovROSInterface
 import os
 
 class BlueROVEnv(gym.Env):
-    def __init__(self, seed=None, save_dir=None):
+    def __init__(self, seed=None, save_dir=None, mode="train"):
         super(BlueROVEnv, self).__init__()
 
         if seed is not None:
@@ -35,7 +35,11 @@ class BlueROVEnv(gym.Env):
         if save_dir is None:
             save_dir = "./RL"
         os.makedirs(save_dir, exist_ok=True)
-        self.distance_file_path = os.path.join(save_dir, "distances_over_episodes.txt")
+        if mode == "train":
+            filename = "distances_over_episodes_training.txt"
+        else:
+            filename = "distances_over_episodes_test_current.txt"
+        self.distance_file_path = os.path.join(save_dir, filename)
         self.distance_file = open(self.distance_file_path, "w")
 
 
@@ -43,6 +47,14 @@ class BlueROVEnv(gym.Env):
         """Apply forces to thrusters and return the new observation."""
         self.current_step += 1
         self.total_steps += 1
+
+        # Modify ocean currents every 100 steps
+        if self.total_steps % 100 == 0:
+            cv = self.np_random.uniform(0.0, 1.0)
+            cha = self.np_random.uniform(-0.5, 0.5)
+            cva = self.np_random.uniform(-0.5, 0.5)
+            self.ros.set_ocean_currents(cv, cha, cva)
+            print(f"Ocean currents set to cv: {cv}, cha: {cha}, cva: {cva}")
 
         # Add random noise to the action
         action_noise = np.random.uniform(0.01, 0.05, size=6)
@@ -104,7 +116,7 @@ class BlueROVEnv(gym.Env):
 
         if terminated or truncated:
             # Log the distance to the goal at the end of the episode
-            self.distance_file.write(f"{distance_to_goal},{self.episodes_reward}\n")
+            self.distance_file.write(f"{distance_to_goal},{self.episodes_reward},{self.current_step}\n")
             self.distance_file.flush()
 
         info = {
@@ -113,6 +125,9 @@ class BlueROVEnv(gym.Env):
             'nb_timeouts': self.nb_timeouts,
             'd_delta': self.d_delta,
             'norm_u': self.norm_u,
+            'robot_position': self.ros.robot_position,
+            'robot_initial_position': self.ros.robot_initial_position,
+            'goal_position': self.goal_position,
         }
 
         return observation, reward, terminated, truncated, info
@@ -165,6 +180,7 @@ class BlueROVEnv(gym.Env):
 
         # Concatenate yaw error, position error, and previous action
         obs = np.concatenate([self.yaw_error, self.pose_error, self.prev_action])
+
 
         return obs, {}
     
