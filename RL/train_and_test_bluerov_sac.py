@@ -40,9 +40,12 @@ def get_savedir(mode):
     base = "SAC_savedir_"
     dirs = [d for d in os.listdir(".") if re.match(rf"{base}\d+$", d)]
     pairs = sorted([int(d.split("_")[-1]) for d in dirs if int(d.split("_")[-1]) % 2 == 0])
+    odd = sorted([int(d.split("_")[-1]) for d in dirs if int(d.split("_")[-1]) % 2 != 0])
     if mode == "train":
         next_pair = pairs[-1] + 2 if pairs else 0
+        next_odd = odd[-1] + 1 if odd else 1
         savedir = f"{base}{next_pair}"
+        savedir = f"{base}_{next_odd}" 
         os.makedirs(savedir, exist_ok=True)
         return savedir
     elif mode == "test":
