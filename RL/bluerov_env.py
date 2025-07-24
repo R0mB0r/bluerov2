@@ -40,7 +40,10 @@ class BlueROVEnv(gym.Env):
         else:
             filename = "distances_over_episodes_test_current.txt"
         self.distance_file_path = os.path.join(save_dir, filename)
-        self.distance_file = open(self.distance_file_path, "w")
+        self.distance_file = open(self.distance_file_path, "a")
+        self.distance_file.write("\n\n")
+        self.distance_file.write(f"=== New session: {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+        self.distance_file.write("Episode,Distance,Reward,Steps\n")
 
 
     def step(self, action):
@@ -49,12 +52,12 @@ class BlueROVEnv(gym.Env):
         self.total_steps += 1
 
         # Modify ocean currents every 100 steps
-        if self.total_steps % 100 == 0:
-            cv = self.np_random.uniform(0.0, 1.0)
-            cha = self.np_random.uniform(-0.5, 0.5)
-            cva = self.np_random.uniform(-0.5, 0.5)
-            self.ros.set_ocean_currents(cv, cha, cva)
-            print(f"Ocean currents set to cv: {cv}, cha: {cha}, cva: {cva}")
+        # if self.total_steps % 100 == 0:
+        #     cv = self.np_random.uniform(0.0, 1.0)
+        #     cha = self.np_random.uniform(-0.5, 0.5)
+        #     cva = self.np_random.uniform(-0.5, 0.5)
+        #     self.ros.set_ocean_currents(cv, cha, cva)
+        #     print(f"Ocean currents set to cv: {cv}, cha: {cha}, cva: {cva}")
 
         # Add random noise to the action
         action_noise = np.random.uniform(0.01, 0.05, size=6)
@@ -64,7 +67,7 @@ class BlueROVEnv(gym.Env):
         # Publish thruster commands
         self.ros.publish_thrusters(scaled_action)
 
-        time.sleep(0.1)  # Wait for the thrusters to apply forces
+        #time.sleep(0.1)  # Wait for the thrusters to apply forces
 
         # Observation calculation
         self.yaw_error = self.goal_position[5] - self.ros.robot_position[5]
@@ -80,7 +83,7 @@ class BlueROVEnv(gym.Env):
 
         # Metrics calculation
         self.d_delta = distance_point_segment_3d_cross(self.ros.robot_initial_position[:3], self.goal_position[:3], self.ros.robot_position[:3])
-        self.norm_u = np.linalg.norm(self.prev_action)
+        self.norm_u = np.linalg.norm(self.prev_action*20.0)
         
         # Reward calculation
         distance_to_goal = np.linalg.norm(self.ros.robot_position[:3] - self.goal_position[:3])
