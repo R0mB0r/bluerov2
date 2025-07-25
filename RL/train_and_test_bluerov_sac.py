@@ -45,7 +45,7 @@ def get_savedir(mode):
         next_pair = pairs[-1] + 2 if pairs else 0
         next_odd = odd[-1] + 1 if odd else 1
         savedir = f"{base}{next_pair}"
-        savedir = f"{base}_{next_odd}" 
+        #savedir = f"{base}_{next_odd}" 
         os.makedirs(savedir, exist_ok=True)
         return savedir
     elif mode == "test":
@@ -75,7 +75,7 @@ def train_model(train_seed, total_timesteps):
 
     # Sauvegarde du modèle
     model.save(os.path.join(savedir, "final_model_bluerov_sac"))
-    #train_env.save(os.path.join(savedir, "vecnormalize_SAC.pkl"))
+    train_env.save(os.path.join(savedir, "vecnormalize_SAC.pkl"))
     print("✅ Modèle entraîné et sauvegardé.")
     train_env.close()
 
@@ -84,7 +84,7 @@ def test_model(test_seed, num_episodes):
     print(f"🧪 Test du modèle SAC sur BlueROV, dossier utilisé : {savedir}")
 
     test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=test_seed, save_dir=savedir, mode="test"))])
-    #test_env = VecNormalize.load(os.path.join(savedir, "vecnormalize_SAC.pkl"), venv=test_env)
+    test_env = VecNormalize.load(os.path.join(savedir, "vecnormalize_SAC.pkl"), venv=test_env)
     model = SAC.load(os.path.join(savedir, "final_model_bluerov_sac.zip"), device="cpu")
     print(model.policy)
 

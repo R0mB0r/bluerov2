@@ -5,6 +5,8 @@ from math import inf
 from ros_control import BlueRovROSInterface
 import os
 
+#TIME_PAUSE = 1/26
+
 class BlueROVEnv(gym.Env):
     def __init__(self, seed=None, save_dir=None, mode="train"):
         super(BlueROVEnv, self).__init__()
@@ -45,6 +47,8 @@ class BlueROVEnv(gym.Env):
         self.distance_file.write(f"=== New session: {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
         self.distance_file.write("Episode,Distance,Reward,Steps\n")
 
+        self.last_publish_time = None  # Initialize the last publish time
+
 
     def step(self, action):
         """Apply forces to thrusters and return the new observation."""
@@ -64,6 +68,15 @@ class BlueROVEnv(gym.Env):
         action += action_noise
         scaled_action = np.clip(action, -1.0, 1.0) * 20.0
 
+        # current_time = time.time()
+        # if self.last_publish_time is not None:
+        #     time_between_publishes = current_time - self.last_publish_time
+        #     while time_between_publishes < TIME_PAUSE:
+        #         time_between_publishes = time.time() - self.last_publish_time
+            #print(time_between_publishes)
+
+        #self.last_publish_time = current_time
+        
         # Publish thruster commands
         self.ros.publish_thrusters(scaled_action)
 
