@@ -5,7 +5,6 @@ from math import inf
 from ros_control import BlueRovROSInterface
 import os
 
-
 class BlueROVEnv(gym.Env):
     def __init__(self, seed=None, save_dir=None, mode="train"):
         super(BlueROVEnv, self).__init__()
@@ -60,14 +59,12 @@ class BlueROVEnv(gym.Env):
         action += action_noise
         scaled_action = np.clip(action, -1.0, 1.0) * 20.0
 
-        self.last_publish_time = time.time()
-
+        
         
         # Publish thruster commands
         self.ros.publish_thrusters(scaled_action)
-
-
-        time.sleep(0.1)
+        
+        time.sleep(0.1)  # Wait for the thrusters to apply forces
 
         # Observation calculation
         self.yaw_error = self.goal_position[5] - self.ros.robot_position[5]
@@ -91,7 +88,8 @@ class BlueROVEnv(gym.Env):
         if distance_to_goal >= self.prev_distance:
             reward = -10.0
         else:
-            reward = 100*np.exp(-distance_to_goal / 20)
+            reward = 1*np.exp(-distance_to_goal / 20)
+            
 
         self.prev_distance = distance_to_goal
 

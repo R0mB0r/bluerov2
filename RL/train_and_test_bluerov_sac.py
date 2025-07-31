@@ -56,10 +56,11 @@ def get_savedir(mode):
 
 def train_model(train_seed, total_timesteps):
     savedir = get_savedir("train")
+
     print(f"🚀 Entraînement SAC du BlueROV, dossier de sauvegarde : {savedir}")
 
     train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=train_seed, save_dir=savedir))])
-    #train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
+    #train_env = VecNormalize(train_env, norm_obs=True)
 
     model = SAC(
         policy="MlpPolicy",
@@ -81,7 +82,7 @@ def train_model(train_seed, total_timesteps):
 
 def test_model(test_seed, num_episodes):
     savedir = get_savedir("test")
-    #savedir = "SAC_savedir_3"
+    #savedir = "SAC_savedir_2"  # Utiliser le dossier de sauvegarde par défaut
     print(f"🧪 Test du modèle SAC sur BlueROV, dossier utilisé : {savedir}")
 
     test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=test_seed, save_dir=savedir, mode="test"))])
