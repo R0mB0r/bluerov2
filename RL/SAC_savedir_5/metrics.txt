@@ -1,0 +1,14 @@
+===== Résultats du test =====
+Nombre d'épisodes : 5
+Seed utilisée : 123
+success rate (%): 100.00%
+collision rate (%): 0.00%
+timeout rate (%): 0.00%
+mean of d_delta: 3.84
+std of d_delta: 2.40
+mean of norm_u: 36.31
+mean number of step: 327.00
+mean of sum of norm_u: 11873.89
+Note: SAC_5, entrainement 20fps
+--------------------------------------------------
+

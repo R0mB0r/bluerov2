@@ -102,8 +102,8 @@ def plot_episode_3d(initial, goal, positions, episode_number):
 # === Exemple d'utilisation ===
 
 #file_path = "PPO_savedir_0/positions_log.txt"  # adapte si besoin
-file_path = "SAC_savedir_0/positions_log.txt"  # adapte si besoin
-episode_number = 0  # numéro de l’épisode à tracer
+file_path = "SAC_savedir_9/positions_log.txt"  # adapte si besoin
+episode_number = 1  # numéro de l’épisode à tracer
 
 initial, goal, positions = parse_episode_positions(file_path, episode_number)
 

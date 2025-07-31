@@ -1,0 +1,14 @@
+===== Résultats du test =====
+Nombre d'épisodes : 5
+Seed utilisée : 123
+success rate (%): 80.00%
+collision rate (%): 0.00%
+timeout rate (%): 20.00%
+mean of d_delta: 2.63
+std of d_delta: 1.49
+mean of norm_u: 27.83
+mean number of step: 700.40
+mean of sum of norm_u: 19494.22
+Note: Test des courants marins
+--------------------------------------------------
+

@@ -1,0 +1,28 @@
+===== Résultats du test =====
+Nombre d'épisodes : 500
+Seed utilisée : 123
+success rate (%): 9.40%
+collision rate (%): 0.00%
+timeout rate (%): 90.60%
+mean of d_delta: 2.44
+std of d_delta: 1.78
+mean of norm_u: 36.35
+mean number of step: 970.33
+mean of sum of norm_u: 35270.99
+Note: SAC1, 55fps, coeff_reward = 40, normalized (obs+reward)
+--------------------------------------------------
+
+===== Résultats du test =====
+Nombre d'épisodes : 5
+Seed utilisée : 123
+success rate (%): 100.00%
+collision rate (%): 0.00%
+timeout rate (%): 0.00%
+mean of d_delta: 3.65
+std of d_delta: 1.77
+mean of norm_u: 35.64
+mean number of step: 422.80
+mean of sum of norm_u: 15067.44
+Note: SAC1, 55fps, coeff_reward = 40, normalized
+--------------------------------------------------
+

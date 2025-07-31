@@ -5,7 +5,6 @@ from math import inf
 from ros_control import BlueRovROSInterface
 import os
 
-#TIME_PAUSE = 1/26
 
 class BlueROVEnv(gym.Env):
     def __init__(self, seed=None, save_dir=None, mode="train"):
@@ -40,7 +39,7 @@ class BlueROVEnv(gym.Env):
         if mode == "train":
             filename = "distances_over_episodes_training.txt"
         else:
-            filename = "distances_over_episodes_test_current.txt"
+            filename = "distances_over_episodes_test.txt"
         self.distance_file_path = os.path.join(save_dir, filename)
         self.distance_file = open(self.distance_file_path, "a")
         self.distance_file.write("\n\n")
@@ -48,6 +47,7 @@ class BlueROVEnv(gym.Env):
         self.distance_file.write("Episode,Distance,Reward,Steps\n")
 
         self.last_publish_time = None  # Initialize the last publish time
+        self.mean_time_of_step = 0
 
 
     def step(self, action):
@@ -55,32 +55,19 @@ class BlueROVEnv(gym.Env):
         self.current_step += 1
         self.total_steps += 1
 
-        # Modify ocean currents every 100 steps
-        # if self.total_steps % 100 == 0:
-        #     cv = self.np_random.uniform(0.0, 1.0)
-        #     cha = self.np_random.uniform(-0.5, 0.5)
-        #     cva = self.np_random.uniform(-0.5, 0.5)
-        #     self.ros.set_ocean_currents(cv, cha, cva)
-        #     print(f"Ocean currents set to cv: {cv}, cha: {cha}, cva: {cva}")
-
         # Add random noise to the action
         action_noise = np.random.uniform(0.01, 0.05, size=6)
         action += action_noise
         scaled_action = np.clip(action, -1.0, 1.0) * 20.0
 
-        # current_time = time.time()
-        # if self.last_publish_time is not None:
-        #     time_between_publishes = current_time - self.last_publish_time
-        #     while time_between_publishes < TIME_PAUSE:
-        #         time_between_publishes = time.time() - self.last_publish_time
-            #print(time_between_publishes)
+        self.last_publish_time = time.time()
 
-        #self.last_publish_time = current_time
         
         # Publish thruster commands
         self.ros.publish_thrusters(scaled_action)
 
-        #time.sleep(0.1)  # Wait for the thrusters to apply forces
+
+        time.sleep(0.1)
 
         # Observation calculation
         self.yaw_error = self.goal_position[5] - self.ros.robot_position[5]
@@ -104,7 +91,7 @@ class BlueROVEnv(gym.Env):
         if distance_to_goal >= self.prev_distance:
             reward = -10.0
         else:
-            reward = 40*np.exp(-distance_to_goal / 20)
+            reward = 100*np.exp(-distance_to_goal / 20)
 
         self.prev_distance = distance_to_goal
 
@@ -131,6 +118,7 @@ class BlueROVEnv(gym.Env):
         self.episodes_reward += reward
 
         if terminated or truncated:
+        
             # Log the distance to the goal at the end of the episode
             self.distance_file.write(f"{distance_to_goal},{self.episodes_reward},{self.current_step}\n")
             self.distance_file.flush()
@@ -159,7 +147,7 @@ class BlueROVEnv(gym.Env):
         # Stop all thrusters
         self.ros.stop_all_thrusters()
 
-        time.sleep(0.1)
+        time.sleep(0.05)
 
         # Activate the flag to wait for the new position in pose_callback
         self.resetting_pose = True

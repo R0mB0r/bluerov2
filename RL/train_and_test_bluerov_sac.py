@@ -41,17 +41,17 @@ def get_savedir(mode):
     dirs = [d for d in os.listdir(".") if re.match(rf"{base}\d+$", d)]
     pairs = sorted([int(d.split("_")[-1]) for d in dirs if int(d.split("_")[-1]) % 2 == 0])
     odd = sorted([int(d.split("_")[-1]) for d in dirs if int(d.split("_")[-1]) % 2 != 0])
+    print(f"Pairs: {pairs}, Odd: {odd}")
     if mode == "train":
         next_pair = pairs[-1] + 2 if pairs else 0
-        next_odd = odd[-1] + 1 if odd else 1
-        savedir = f"{base}{next_pair}"
-        #savedir = f"{base}_{next_odd}" 
+        next_odd = odd[-1] + 2 if odd else 1
+        #savedir = f"{base}{next_pair}"
+        savedir = f"{base}{next_odd}" 
         os.makedirs(savedir, exist_ok=True)
         return savedir
     elif mode == "test":
-        if not pairs:
-            raise FileNotFoundError("Aucun dossier de sauvegarde pair trouvé pour le test.")
-        savedir = f"{base}{pairs[-1]}"
+        #savedir = f"{base}{pairs[-1]}"
+        savedir = f"{base}{odd[-1]}"
         return savedir
 
 def train_model(train_seed, total_timesteps):
@@ -59,7 +59,7 @@ def train_model(train_seed, total_timesteps):
     print(f"🚀 Entraînement SAC du BlueROV, dossier de sauvegarde : {savedir}")
 
     train_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=train_seed, save_dir=savedir))])
-    train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
+    #train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
 
     model = SAC(
         policy="MlpPolicy",
@@ -75,16 +75,17 @@ def train_model(train_seed, total_timesteps):
 
     # Sauvegarde du modèle
     model.save(os.path.join(savedir, "final_model_bluerov_sac"))
-    train_env.save(os.path.join(savedir, "vecnormalize_SAC.pkl"))
+    #train_env.save(os.path.join(savedir, "vecnormalize_SAC.pkl"))
     print("✅ Modèle entraîné et sauvegardé.")
     train_env.close()
 
 def test_model(test_seed, num_episodes):
     savedir = get_savedir("test")
+    #savedir = "SAC_savedir_3"
     print(f"🧪 Test du modèle SAC sur BlueROV, dossier utilisé : {savedir}")
 
     test_env = DummyVecEnv([lambda: Monitor(BlueROVEnv(seed=test_seed, save_dir=savedir, mode="test"))])
-    test_env = VecNormalize.load(os.path.join(savedir, "vecnormalize_SAC.pkl"), venv=test_env)
+    #test_env = VecNormalize.load(os.path.join(savedir, "vecnormalize_SAC.pkl"), venv=test_env)
     model = SAC.load(os.path.join(savedir, "final_model_bluerov_sac.zip"), device="cpu")
     print(model.policy)
 
@@ -97,7 +98,7 @@ def test_model(test_seed, num_episodes):
     obs = test_env.reset()
     progress_bar = tqdm(total=num_episodes, desc="Test en cours")
 
-    #positions_path = os.path.join(savedir, "positions_log.txt")
+    positions_path = os.path.join(savedir, "positions_log.txt")
 
     for episode in range(num_episodes):
         print(f"\n🎯 Épisode {episode + 1} / {num_episodes}")
@@ -110,8 +111,8 @@ def test_model(test_seed, num_episodes):
         goal_pos = None
 
         # Ouverture du fichier pour l’en-tête de l’épisode
-        #with open(positions_path, "a") as pos_file:
-        #    pos_file.write(f"=== Episode {episode + 1} ===\n")
+        with open(positions_path, "a") as pos_file:
+            pos_file.write(f"=== Episode {episode + 1} ===\n")
 
         while not (done or truncated):
             action, _ = model.predict(obs, deterministic=True)
@@ -126,19 +127,19 @@ def test_model(test_seed, num_episodes):
             sum_norm_u += norm_u
 
             # Mémoriser initial et goal uniquement au premier step
-            #if step == 1:
-            #    initial_pos = info[0]['robot_initial_position'][:3]
-            #    goal_pos = info[0]['goal_position'][:3]
-            #    with open(positions_path, "a") as pos_file:
-            #        pos_file.write(f"Initial: {initial_pos}\n")
-            #        pos_file.write(f"Goal: {goal_pos}\n")
-            #        pos_file.write("Positions:\n")
+            if step == 1:
+                initial_pos = info[0]['robot_initial_position'][:3]
+                goal_pos = info[0]['goal_position'][:3]
+                with open(positions_path, "a") as pos_file:
+                    pos_file.write(f"Initial: {initial_pos}\n")
+                    pos_file.write(f"Goal: {goal_pos}\n")
+                    pos_file.write("Positions:\n")
 
             list_d_delta.append(d_delta)
             list_norm_u.append(norm_u)
 
-            # with open(positions_path, "a") as pos_file:
-            #     pos_file.write(f"{robot_pos}\n")
+            with open(positions_path, "a") as pos_file:
+                 pos_file.write(f"{robot_pos}\n")
 
         nb_steps_episode.append(step)
         sum_norm_u_list.append(sum_norm_u)

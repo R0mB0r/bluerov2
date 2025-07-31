@@ -9,14 +9,17 @@ def get_latest_savedir():
     dirs = [d for d in os.listdir(".") if re.match(rf"{base}\d+$", d)]
     print(f"Found directories: {dirs}")
     pairs = sorted([int(d.split("_")[-1]) for d in dirs if int(d.split("_")[-1]) % 2 == 0])
-    if not pairs:
-        raise FileNotFoundError("Aucun dossier de sauvegarde pair trouvé.")
-    savedir = f"{base}{pairs[-1]}"
+    odd = sorted([int(d.split("_")[-1]) for d in dirs if int(d.split("_")[-1]) % 2 != 0])
+    #if not pairs:
+    #    raise FileNotFoundError("Aucun dossier de sauvegarde pair trouvé.")
+    #savedir = f"{base}{pairs[-1]}"
+    savedir = f"{base}{odd[-1]}" 
     return savedir
 
 savedir = get_latest_savedir()
+#savedir = "SAC_savedir_13"
 print(f"📂 Dossier de sauvegarde utilisé : {savedir}")
-filepath = os.path.join(savedir, "distances_over_episodes_test_current.txt")
+filepath = os.path.join(savedir, "distances_over_episodes_test.txt")
 
 # Charger les distances et rewards depuis le fichier texte (format: distance,reward)
 distances = []
@@ -60,7 +63,7 @@ valid = success_counts > 0
 mean_success_rewards[valid] = cumulative_success_rewards[valid] / success_counts[valid]
 
 # Pourcentage glissant de succès sur 100 épisodes
-window = 100
+window = 10
 sliding_success_percent = np.convolve(below, np.ones(window, dtype=int), 'valid') / window * 100
 sliding_episodes = np.arange(window - 1, len(distances))
 

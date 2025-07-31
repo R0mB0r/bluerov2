@@ -25,7 +25,7 @@ class BlueRovROSInterface:
             '/bluerov2/cmd_thruster5',
             '/bluerov2/cmd_thruster6'
         ]
-        self.thruster_publishers = {topic: self.node.create_publisher(Float64, topic, 10) for topic in self.thruster_topics}
+        self.thruster_publishers = {topic: self.node.create_publisher(Float64, topic, 1) for topic in self.thruster_topics}
 
         # Initialize ocean_current publisher
         self.ocean_current_publisher = self.node.create_publisher(Vector3, '/current', 10)
@@ -44,6 +44,8 @@ class BlueRovROSInterface:
             sys.exit(0)
 
         signal.signal(signal.SIGINT, signal_handler)
+
+        self.last_time = None
 
     def pose_callback(self, msg):
         phi, theta, psi = quat2euler([msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z])
