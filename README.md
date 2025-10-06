@@ -1,3 +1,6 @@
+Inspired from the github repository: [text](https://github.com/CentraleNantesROV/bluerov2?tab=readme-ov-file)
+
+
 # BlueROV2 ROS 2
 
 This repository contains the robot description and necessary launch files to describe and simulate the BlueROV2 (unmanned underwater vehicle) with [Gazebo](https://gazebosim.org/home) and its [hydrodynamics plugins](https://gazebosim.org/api/gazebo/6.1/underwater_vehicles.html) under ROS 2.
