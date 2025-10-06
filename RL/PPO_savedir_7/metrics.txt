@@ -1,0 +1,12 @@
+===== Résultats du test =====
+Nombre d'épisodes : 200
+Seed utilisée : 123
+success rate (%): 95.00%
+collision rate (%):   
+timeout rate (%):
+mean of d_delta: 
+std of d_delta: 
+mean of norm_u: 
+mean number of steps: 
+mean of sum of norm_u: 
+--------------------------------------------------

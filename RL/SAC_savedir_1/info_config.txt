@@ -1,0 +1,1 @@
+config: 55fps coeff_reward = 1 obs+rew normalized
